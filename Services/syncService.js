@@ -151,7 +151,6 @@ class SyncService {
     }
 
     async syncFromSheets(io) {
-        console.log("🔄 Starting Robust Bidirectional Sync...");
         try {
             const repositories = await db.collection("repositories").get();
             if (repositories.empty) return;
@@ -164,7 +163,6 @@ class SyncService {
                 const collectionName = this.getCollectionName(repo);
                 if (!collectionName) continue;
 
-                console.log(`📡 Syncing [${repo.name}] -> Firestore [${collectionName}]`);
 
                 let sheetData = await googleSheetsService.getSheetData(spreadsheetId);
 
@@ -234,7 +232,6 @@ class SyncService {
         } catch (error) {
             console.error("❌ Sync Error:", error);
         }
-        console.log("✅ Sync Cycle Complete.");
     }
 }
 

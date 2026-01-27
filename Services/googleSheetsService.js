@@ -52,13 +52,11 @@ class GoogleSheetsService {
         this._getAuth();
         try {
             const finalRange = range || await this.getFirstSheetName(spreadsheetId);
-            console.log(`📊 Fetching data from [${spreadsheetId}] Range: [${finalRange}]`);
             const response = await this.sheets.spreadsheets.values.get({
                 spreadsheetId,
                 range: finalRange,
             });
             const values = response.data.values || [];
-            console.log(`✅ Retrieved ${values.length} rows from sheet.`);
             return values;
         } catch (error) {
             console.error(`Error fetching sheet data:`, error.message);
