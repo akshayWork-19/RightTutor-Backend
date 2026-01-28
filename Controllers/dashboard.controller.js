@@ -57,16 +57,18 @@ export const analyzeInquiry = asyncHandler(async (req, res) => {
 
 export const getAIChat = asyncHandler(async (req, res) => {
     const { prompt, context } = req.body;
+    logger.info(`AI Chat Request received. Prompt length: ${prompt?.length}`);
 
     if (!prompt) {
         throw new ApiError(400, "Prompt is required");
     }
 
     if (!process.env.GEMINI_API_KEY) {
+        logger.error("GEMINI_API_KEY is missing in backend environment!");
         throw new ApiError(500, "Gemini API key is not configured on server");
     }
 
-    const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
     // Use the official model name
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
