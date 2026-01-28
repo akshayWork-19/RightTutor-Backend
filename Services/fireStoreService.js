@@ -32,6 +32,13 @@ class BookingServices {
                 console.warn("⚠️ Google Sheets Sync Failed (Booking was saved):", sheetError.message);
             }
 
+            // Emit Socket Event
+            try {
+                const { getIO } = await import('../socket.js');
+                const io = getIO();
+                io.emit('data_updated', { module: 'bookings', action: 'add', data: result });
+            } catch (err) { }
+
             return result;
         } catch (error) {
             console.error("Error in addBooking service:", error.message);
@@ -65,7 +72,18 @@ class BookingServices {
             await this.bookingsCollection.doc(id).update(updateData);
             const result = { id, ...updateData };
             // Push to Google Sheets
-            await syncService.pushToSheet('Bookings', result, 'update');
+            try {
+                await syncService.pushToSheet('Bookings', result, 'update');
+            } catch (sheetError) {
+                console.warn("⚠️ Google Sheets Sync Failed (Booking update):", sheetError.message);
+            }
+
+            // Emit Socket Event
+            try {
+                const { getIO } = await import('../socket.js');
+                const io = getIO();
+                io.emit('data_updated', { module: 'bookings', action: 'update', data: result });
+            } catch (err) { }
             return result;
         } catch (error) {
             console.error("Error inside updateBooking method!", error);
@@ -77,7 +95,18 @@ class BookingServices {
         try {
             await this.bookingsCollection.doc(id).delete();
             // Push to Google Sheets
-            await syncService.pushToSheet('Bookings', { id }, 'delete');
+            try {
+                await syncService.pushToSheet('Bookings', { id }, 'delete');
+            } catch (sheetError) {
+                console.warn("⚠️ Google Sheets Sync Failed (Booking deletion):", sheetError.message);
+            }
+
+            // Emit Socket Event
+            try {
+                const { getIO } = await import('../socket.js');
+                const io = getIO();
+                io.emit('data_updated', { module: 'bookings', action: 'delete', id });
+            } catch (err) { }
             return { id };
         } catch (error) {
             console.error("Error inside deleteBooking method!", error);

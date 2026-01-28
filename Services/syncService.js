@@ -233,6 +233,45 @@ class SyncService {
             console.error("❌ Sync Error:", error);
         }
     }
+
+    /**
+     * Push a single document change to the linked Google Sheet
+     */
+    async pushToSheet(moduleName, data, action) {
+        try {
+            const url = await this.getLinkedSheet(moduleName);
+            if (!url) {
+                console.warn(`⚠️ No sheet linked for module: ${moduleName}`);
+                return;
+            }
+
+            const spreadsheetId = googleSheetsService.extractSpreadsheetId(url);
+            if (!spreadsheetId) {
+                console.error(`❌ Invalid Spreadsheet URL for ${moduleName}: ${url}`);
+                return;
+            }
+
+            const headers = this.getHeaders(moduleName, data);
+            const rowData = this.mapToRow(moduleName, data, headers);
+
+            switch (action) {
+                case 'add':
+                    await googleSheetsService.appendRow(spreadsheetId, rowData);
+                    break;
+                case 'update':
+                    await googleSheetsService.updateRow(spreadsheetId, data.id, rowData);
+                    break;
+                case 'delete':
+                    await googleSheetsService.deleteRow(spreadsheetId, data.id);
+                    break;
+                default:
+                    console.warn(`⚠️ Unknown action type: ${action}`);
+            }
+        } catch (error) {
+            console.error(`❌ Push to sheet failed for ${moduleName}:`, error.message);
+            // We don't throw to prevent crashing the main DB operation
+        }
+    }
 }
 
 export default new SyncService();

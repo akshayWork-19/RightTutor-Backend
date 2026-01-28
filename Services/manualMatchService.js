@@ -17,7 +17,18 @@ class ManualMatchServices {
             const docReference = await this.manualMatchCollection.add(matchWithTimestamps);
             const result = { id: docReference.id, ...matchWithTimestamps };
             // Push to Google Sheets
-            await syncService.pushToSheet('Matches', result, 'add');
+            try {
+                await syncService.pushToSheet('Matches', result, 'add');
+            } catch (sheetError) {
+                console.warn("⚠️ Google Sheets Sync Failed (Match was saved):", sheetError.message);
+            }
+
+            // Emit Socket Event
+            try {
+                const { getIO } = await import('../socket.js');
+                const io = getIO();
+                io.emit('data_updated', { module: 'manualMatches', action: 'add', data: result });
+            } catch (err) { }
             return result;
         } catch (error) {
             console.error("Error inside addManualMatch method!", error);
@@ -51,7 +62,18 @@ class ManualMatchServices {
             await this.manualMatchCollection.doc(id).update(updateData);
             const result = { id, ...updateData };
             // Push to Google Sheets
-            await syncService.pushToSheet('Matches', result, 'update');
+            try {
+                await syncService.pushToSheet('Matches', result, 'update');
+            } catch (sheetError) {
+                console.warn("⚠️ Google Sheets Sync Failed (Match update):", sheetError.message);
+            }
+
+            // Emit Socket Event
+            try {
+                const { getIO } = await import('../socket.js');
+                const io = getIO();
+                io.emit('data_updated', { module: 'manualMatches', action: 'update', data: result });
+            } catch (err) { }
             return result;
         } catch (error) {
             console.error("Error inside updateManualMatch method!", error);
@@ -63,7 +85,18 @@ class ManualMatchServices {
         try {
             await this.manualMatchCollection.doc(id).delete();
             // Push to Google Sheets
-            await syncService.pushToSheet('Matches', { id }, 'delete');
+            try {
+                await syncService.pushToSheet('Matches', { id }, 'delete');
+            } catch (sheetError) {
+                console.warn("⚠️ Google Sheets Sync Failed (Match deletion):", sheetError.message);
+            }
+
+            // Emit Socket Event
+            try {
+                const { getIO } = await import('../socket.js');
+                const io = getIO();
+                io.emit('data_updated', { module: 'manualMatches', action: 'delete', id });
+            } catch (err) { }
             return { id };
         } catch (error) {
             console.error("Error inside deleteManualMatch method!", error);

@@ -18,13 +18,17 @@ class ContactServices {
             const result = { id: docReference.id, ...contactWithTimestamps };
 
             // Push to Google Sheets
-            await syncService.pushToSheet('Inquiries', result, 'add');
+            try {
+                await syncService.pushToSheet('Inquiries', result, 'add');
+            } catch (sheetError) {
+                console.warn("⚠️ Google Sheets Sync Failed (Inquiry was saved):", sheetError.message);
+            }
 
             // Emit Socket Event
             try {
                 const { getIO } = await import('../socket.js');
                 const io = getIO();
-                io.emit('data_updated', { type: 'inquiry', action: 'add', data: result });
+                io.emit('data_updated', { module: 'contacts', action: 'add', data: result });
             } catch (err) {
                 console.error("Socket emit failed", err.message);
             }
@@ -62,7 +66,17 @@ class ContactServices {
             await this.contactCollection.doc(id).update(updateData);
             const result = { id, ...updateData };
             // Push to Google Sheets
-            await syncService.pushToSheet('Inquiries', result, 'update');
+            try {
+                await syncService.pushToSheet('Inquiries', result, 'update');
+            } catch (sheetError) {
+                console.warn("⚠️ Google Sheets Sync Failed (Contact update):", sheetError.message);
+            }
+            // Emit Socket Event
+            try {
+                const { getIO } = await import('../socket.js');
+                const io = getIO();
+                io.emit('data_updated', { module: 'contacts', action: 'update', data: result });
+            } catch (err) { }
             return result;
         } catch (error) {
             console.error("Error inside updateContact method!", error);
@@ -74,7 +88,18 @@ class ContactServices {
         try {
             await this.contactCollection.doc(id).delete();
             // Push to Google Sheets
-            await syncService.pushToSheet('Inquiries', { id }, 'delete');
+            try {
+                await syncService.pushToSheet('Inquiries', { id }, 'delete');
+            } catch (sheetError) {
+                console.warn("⚠️ Google Sheets Sync Failed (Contact deletion):", sheetError.message);
+            }
+
+            // Emit Socket Event
+            try {
+                const { getIO } = await import('../socket.js');
+                const io = getIO();
+                io.emit('data_updated', { module: 'contacts', action: 'delete', id });
+            } catch (err) { }
             return { id };
         } catch (error) {
             console.error("Error inside deleteContact method!", error);
