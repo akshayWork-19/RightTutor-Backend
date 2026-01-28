@@ -86,7 +86,7 @@ class BookingServices {
             } catch (err) { }
             return result;
         } catch (error) {
-            console.error("Error inside updateBooking method!", error);
+            console.error(`❌ Firestore Update Error [ID: ${id}]:`, error.message);
             throw error;
         }
     }

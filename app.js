@@ -12,6 +12,7 @@ import dashboardRoutes from "./Routes/dashboard.routes.js";
 import authRoutes from "./Routes/auth.routes.js";
 import { errorHandler } from "./Middleware/errorHandler.js";
 import { validateEnv } from "./Config/envValidation.js";
+import { cleanObject } from "./Utils/dataUtils.js";
 
 // Validate environment before anything else
 validateEnv();
@@ -24,15 +25,23 @@ app.use(helmet());
 const allowedOrigins = [
     process.env.FRONTEND_URL,
     process.env.ADMIN_DASHBOARD_URL,
+    "https://right-tutor-admin-g5ie98fa2-akshay-kumars-projects-a1de1509.vercel.app",
     "http://localhost:3000",
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "http://localhost:8080"
 ].filter(Boolean);
 
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === "development") {
+
+        const isAllowed = allowedOrigins.includes(origin) ||
+            origin.endsWith('.vercel.app') ||
+            origin.includes('localhost') ||
+            process.env.NODE_ENV === "development";
+
+        if (isAllowed) {
             callback(null, true);
         } else {
             callback(new Error("Not allowed by CORS"));
@@ -52,8 +61,14 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Limits to prevent large payload attacks
-app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
+// Clean all request bodies for Firestore compatibility (strips undefined)
+app.use((req, res, next) => {
+    if (req.body) req.body = cleanObject(req.body);
+    next();
+});
 
 // Health Check
 app.get('/health', (req, res) => {
