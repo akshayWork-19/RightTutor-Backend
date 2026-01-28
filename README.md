@@ -1,6 +1,6 @@
-# 🚀 Elite Tutors Backend
+# 🚀 Right Tutor Backend
 
-The core heartbeat of the Elite Tutors platform, providing real-time data synchronization between Firestore and Google Sheets, AI-powered inquiry analysis, and administrative dashboard support.
+The core heartbeat of the Right Tutor platform, providing real-time data synchronization between Firestore and Google Sheets, AI-powered inquiry analysis, and administrative dashboard support.
 
 ## 🏗️ Architecture Overview
 
