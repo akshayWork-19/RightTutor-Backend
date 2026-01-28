@@ -256,7 +256,8 @@ class SyncService {
 
             switch (action) {
                 case 'add':
-                    await googleSheetsService.appendRow(spreadsheetId, rowData);
+                    // Use updateRow instead of appendRow to prevent duplication if ID already exists
+                    await googleSheetsService.updateRow(spreadsheetId, data.id, rowData);
                     break;
                 case 'update':
                     await googleSheetsService.updateRow(spreadsheetId, data.id, rowData);
