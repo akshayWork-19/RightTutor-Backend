@@ -54,3 +54,42 @@ export const analyzeInquiry = asyncHandler(async (req, res) => {
         data: text || "Unable to generate analysis."
     });
 });
+
+export const getAIChat = asyncHandler(async (req, res) => {
+    const { prompt, context } = req.body;
+
+    if (!prompt) {
+        throw new ApiError(400, "Prompt is required");
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+        throw new ApiError(500, "Gemini API key is not configured on server");
+    }
+
+    const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    // Use the official model name
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const systemInstruction = `
+        You are a professional administrative assistant for RightTutor.
+        Context: ${context || 'General admin dashboard interaction.'}
+        Tone: Helpful, direct, and concise.
+        Goal: Answer administrative questions, summarize data, or help with scheduling.
+    `;
+
+    const chat = model.startChat({
+        history: [],
+        generationConfig: {
+            maxOutputTokens: 500,
+        },
+    });
+
+    const result = await chat.sendMessage(`${systemInstruction}\n\nUser Question: ${prompt}`);
+    const response = await result.response;
+    const text = response.text();
+
+    res.status(200).json({
+        success: true,
+        data: text || "I apologize, but I could not process that request."
+    });
+});

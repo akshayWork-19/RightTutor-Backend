@@ -1,5 +1,5 @@
 import express from "express";
-import { getDashboardStats, analyzeInquiry } from "../Controllers/dashboard.controller.js";
+import { getDashboardStats, analyzeInquiry, getAIChat } from "../Controllers/dashboard.controller.js";
 import { verifyJWT } from "../Middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -9,5 +9,6 @@ router.use(verifyJWT);
 
 router.get("/stats", getDashboardStats);
 router.post("/analyze", analyzeInquiry);
+router.post("/chat", getAIChat);
 
 export default router;
