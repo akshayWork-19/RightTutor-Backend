@@ -42,6 +42,7 @@ class BookingServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("full_database_context");
 
             return result;
         } catch (error) {
@@ -91,6 +92,7 @@ class BookingServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("full_database_context");
 
             return result;
         } catch (error) {
@@ -118,6 +120,7 @@ class BookingServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("full_database_context");
 
             return { id };
         } catch (error) {

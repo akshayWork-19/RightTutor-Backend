@@ -33,6 +33,7 @@ class ManualMatchServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("full_database_context");
 
             return result;
         } catch (error) {
@@ -82,6 +83,7 @@ class ManualMatchServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("full_database_context");
 
             return result;
         } catch (error) {
@@ -109,6 +111,7 @@ class ManualMatchServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("full_database_context");
 
             return { id };
         } catch (error) {

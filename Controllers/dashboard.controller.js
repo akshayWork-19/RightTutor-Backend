@@ -37,29 +37,65 @@ const getStatsInternal = async () => {
     return stats;
 };
 
-// Helper to get recent activity with caching
-const getRecentActivityInternal = async () => {
-    const CACHE_KEY = "recent_activity_context";
-    const CACHE_TTL = 300; // 5 minutes
+// Helper to get FULL DATABASE CONTEXT with caching
+const getFullDatabaseContextInternal = async () => {
+    const CACHE_KEY = "full_database_context";
+    const CACHE_TTL = 600; // 10 minutes (longer cache for heavy data)
 
-    const cachedActivity = cache.get(CACHE_KEY);
-    if (cachedActivity) return cachedActivity;
+    const cachedContext = cache.get(CACHE_KEY);
+    if (cachedContext) return cachedContext;
 
-    // Fetch last 5 contacts for context
-    const recentContactsSnapshot = await db.collection("contacts")
-        .orderBy('createdAt', 'desc')
-        .limit(5)
-        .get();
+    // Parallel fetch for speed
+    const [contactsSnap, bookingsSnap, matchesSnap] = await Promise.all([
+        db.collection("contacts").orderBy('createdAt', 'desc').limit(100).get(), // Limit closest 100 for safety
+        db.collection("bookings").orderBy('createdAt', 'desc').limit(100).get(),
+        db.collection("manualMatches").orderBy('createdAt', 'desc').limit(100).get()
+    ]);
 
-    const recentInquiries = recentContactsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return `- ${data.name} (${data.subject || 'No Subject'}): ${data.message?.substring(0, 50)}...`;
-    }).join('\n');
+    const contacts = contactsSnap.docs.map(doc => {
+        const d = doc.data();
+        return {
+            name: d.name,
+            email: d.email,
+            phone: d.phone,
+            subject: d.subject,
+            message: d.message,
+            status: d.status,
+            date: d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : d.createdAt
+        };
+    });
 
-    const activityContext = recentInquiries || "No recent inquiries found.";
+    const bookings = bookingsSnap.docs.map(doc => {
+        const d = doc.data();
+        return {
+            studentName: d.studentName,
+            tutorName: d.tutorName,
+            subject: d.subject,
+            classTime: d.classTime,
+            status: d.status,
+            date: d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : d.createdAt
+        };
+    });
 
-    cache.set(CACHE_KEY, activityContext, CACHE_TTL);
-    return activityContext;
+    const matches = matchesSnap.docs.map(doc => {
+        const d = doc.data();
+        return {
+            parentName: d.parentName,
+            requirements: d.requirements,
+            suggestedTutor: d.suggestedTutor,
+            status: d.status,
+            date: d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : d.createdAt
+        };
+    });
+
+    const fullContext = JSON.stringify({
+        CONTACTS_TABLE: contacts,
+        BOOKINGS_TABLE: bookings,
+        MATCHES_TABLE: matches
+    }, null, 2);
+
+    cache.set(CACHE_KEY, fullContext, CACHE_TTL);
+    return fullContext;
 };
 
 export const getDashboardStats = asyncHandler(async (req, res) => {
@@ -124,33 +160,34 @@ export const getAIChat = asyncHandler(async (req, res) => {
     }
 
     try {
-        // Fetch real-time data for context
-        const stats = await getStatsInternal();
-        const recentActivity = await getRecentActivityInternal();
-
-        const dbContext = `
-        CURRENT DASHBOARD DATA:
-        - Total Inquiries: ${stats.totalInquiries}
-        - Active Appointments: ${stats.activeAppointments}
-        - Teacher Requests: ${stats.teacherRequests}
-        - Resolution Rate: ${stats.resolutionRate}
-
-        RECENT INQUIRIES (Last 5):
-        ${recentActivity}
-        `;
+        // Fetch FULL DATABASE CONTEXT
+        const dbContext = await getFullDatabaseContextInternal();
+        const stats = await getStatsInternal(); // Lightweight cached stats
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const systemInstruction = `
-        You are a smart and helpful administrative assistant for RightTutor.
+        You are a highly capable Administrative AI for RightTutor with READ ACCESS to the company's database.
         
+        === DATABASE STATS ===
+        - Total Inquiries: ${stats.totalInquiries}
+        - Active Bookings: ${stats.activeAppointments}
+        - Teacher Matches: ${stats.teacherRequests}
+        - Resolution Rate: ${stats.resolutionRate}
+
+        === FULL DATABASE RECORDS (JSON Format) ===
         ${dbContext}
         
-        Additional Context: ${context || 'General interaction'}
-        
-        Goal: Answer questions based on the REAL data provided above. If asked about "how many inquiries" or "recent activity", use the data provided.
-        Tone: Professional, concise, and friendly.
+        === INSTRUCTIONS ===
+        1. You have access to the actual data tables above (Contacts, Bookings, Matches).
+        2. When asked about specific people, dates, subjects, or details, QUERY the JSON data above.
+        3. Provide specific answers (e.g., "Yes, we have an inquiry from John about Math created on 2024-02-20").
+        4. If the data isn't in the records above, explicitly say "I don't see that in the database."
+        5. Structure your answers clearly.
+
+        Context: ${context || 'General interaction'}
+        Tone: Professional, Data-Driven, Helpful.
         `;
 
         const chat = model.startChat({
