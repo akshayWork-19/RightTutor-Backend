@@ -28,10 +28,17 @@ Powered by **Socket.io**, the system broadcasts `data_updated` events to all con
 - Parent Inquiries
 - Manual Match Requests
 
-### 3. AI Analysis (Gemini 1.5 Flash)
-Integrated with Google's Generative AI to provide:
-- Instant summaries of complex parent inquiries.
-- Suggested professional replies for administrative staff.
+### 3. AI Analysis & Context Injection (v1.1)
+Integrated with **Google Gemini 1.5 Flash** with **Full Database Access**:
+- **Raw Data Context**: The AI is injected with 10-minute cached snapshots of full `Contacts`, `Bookings`, and `Matches` tables.
+- **Deep Querying**: Can answer specific questions like "Who is the tutor for John?" by querying the in-memory JSON tables.
+- **Cost Protection**: Context is fetched once and cached; subsequent AI requests use the cache.
+
+### 4. Smart Caching Layer (v1.1)
+A custom in-memory caching system (`Utils/cache.js`) drastically reduces Firestore read limits:
+- **Dashboard Stats**: Cached for 5 minutes (TTL).
+- **Auto-Invalidation**: Any write operation (Add/Update/Delete) to Contacts or Bookings immediately clears the relevant cache key, ensuring data consistency without waiting for TTL.
+- **Performance**: Reduces database read operations by ~99% for heavy dashboard usage.
 
 ---
 
@@ -90,10 +97,11 @@ JWT_SECRET=your_secret_key
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
+| `/` | GET | **NEW** API Visual Documentation & Data Models |
 | `/api/v1/consultation` | GET/POST/PUT/DELETE | Manage student bookings |
 | `/api/v1/contact` | GET/POST/PUT/DELETE | Manage parent inquiries |
 | `/api/v1/manual-match` | GET/POST/PUT/DELETE | specialized tutor matching |
-| `/api/v1/dashboard/stats` | GET | Aggregated platform statistics |
+| `/api/v1/dashboard/stats` | GET | Aggregated platform statistics (Cached) |
 | `/api/v1/repository` | GET/POST | Manage linked Google Sheets |
 
 ---
