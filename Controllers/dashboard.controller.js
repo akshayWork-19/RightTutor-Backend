@@ -2,6 +2,7 @@ import { db } from "../Config/firebase.js";
 import { GoogleGenAI } from "@google/genai";
 import { ApiError } from "../Utils/ApiError.js";
 import { asyncHandler } from "../Utils/asyncHandler.js";
+import logger from "../Utils/logger.js";
 
 export const getDashboardStats = asyncHandler(async (req, res) => {
     const inquiriesSnapshot = await db.collection("contacts").get();
