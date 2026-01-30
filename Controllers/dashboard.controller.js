@@ -3,8 +3,24 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ApiError } from "../Utils/ApiError.js";
 import { asyncHandler } from "../Utils/asyncHandler.js";
 import logger from "../Utils/logger.js";
+import { cache } from "../Utils/cache.js";
 
 export const getDashboardStats = asyncHandler(async (req, res) => {
+    const CACHE_KEY = "dashboard_stats";
+    const CACHE_TTL = 300; // 5 minutes
+
+    // Check cache first
+    const cachedStats = cache.get(CACHE_KEY);
+    if (cachedStats) {
+        logger.info("Dashboard stats served from cache");
+        return res.status(200).json({
+            success: true,
+            message: "Stats fetched successfully (cached)",
+            data: cachedStats
+        });
+    }
+
+    // If not in cache, fetch from database
     const inquiriesSnapshot = await db.collection("contacts").get();
     const bookingsSnapshot = await db.collection("bookings").get();
     const matchesSnapshot = await db.collection("manualMatches").get();
@@ -18,15 +34,21 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         ? Math.round((resolvedInquiries / totalInquiries) * 100) + "%"
         : "0%";
 
+    const stats = {
+        totalInquiries,
+        activeAppointments,
+        teacherRequests,
+        resolutionRate
+    };
+
+    // Store in cache
+    cache.set(CACHE_KEY, stats, CACHE_TTL);
+    logger.info("Dashboard stats fetched from database and cached");
+
     res.status(200).json({
         success: true,
         message: "Stats fetched successfully",
-        data: {
-            totalInquiries,
-            activeAppointments,
-            teacherRequests,
-            resolutionRate
-        }
+        data: stats
     });
 });
 

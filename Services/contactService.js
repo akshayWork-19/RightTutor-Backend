@@ -1,5 +1,6 @@
 import { db, admin } from "../Config/firebase.js";
 import syncService from "./syncService.js";
+import { cache } from "../Utils/cache.js";
 
 class ContactServices {
 
@@ -32,6 +33,9 @@ class ContactServices {
             } catch (err) {
                 console.error("Socket emit failed", err.message);
             }
+
+            // Invalidate dashboard stats cache
+            cache.delete("dashboard_stats");
 
             return result;
         } catch (error) {
@@ -77,6 +81,10 @@ class ContactServices {
                 const io = getIO();
                 io.emit('data_updated', { module: 'contacts', action: 'update', data: result });
             } catch (err) { }
+
+            // Invalidate dashboard stats cache
+            cache.delete("dashboard_stats");
+
             return result;
         } catch (error) {
             console.error("Error inside updateContact method!", error);
@@ -100,6 +108,10 @@ class ContactServices {
                 const io = getIO();
                 io.emit('data_updated', { module: 'contacts', action: 'delete', id });
             } catch (err) { }
+
+            // Invalidate dashboard stats cache
+            cache.delete("dashboard_stats");
+
             return { id };
         } catch (error) {
             console.error("Error inside deleteContact method!", error);

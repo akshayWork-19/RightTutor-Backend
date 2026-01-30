@@ -1,5 +1,6 @@
 import { db, admin } from "../Config/firebase.js";
 import syncService from "./syncService.js";
+import { cache } from "../Utils/cache.js";
 
 class BookingServices {
 
@@ -38,6 +39,9 @@ class BookingServices {
                 const io = getIO();
                 io.emit('data_updated', { module: 'bookings', action: 'add', data: result });
             } catch (err) { }
+
+            // Invalidate dashboard stats cache
+            cache.delete("dashboard_stats");
 
             return result;
         } catch (error) {
@@ -84,6 +88,10 @@ class BookingServices {
                 const io = getIO();
                 io.emit('data_updated', { module: 'bookings', action: 'update', data: result });
             } catch (err) { }
+
+            // Invalidate dashboard stats cache
+            cache.delete("dashboard_stats");
+
             return result;
         } catch (error) {
             console.error(`❌ Firestore Update Error [ID: ${id}]:`, error.message);
@@ -107,6 +115,10 @@ class BookingServices {
                 const io = getIO();
                 io.emit('data_updated', { module: 'bookings', action: 'delete', id });
             } catch (err) { }
+
+            // Invalidate dashboard stats cache
+            cache.delete("dashboard_stats");
+
             return { id };
         } catch (error) {
             console.error("Error inside deleteBooking method!", error);
