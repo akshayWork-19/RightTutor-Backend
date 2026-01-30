@@ -108,6 +108,7 @@ app.get('/', (req, res) => {
                     --text: #E0E0E0;
                     --text-dim: #A0A0A0;
                     --border: rgba(255, 255, 255, 0.05);
+                    --code-bg: #1e1e1e;
                 }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body {
@@ -119,7 +120,7 @@ app.get('/', (req, res) => {
                 .container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
                 header {
                     text-align: center;
-                    padding: 4rem 0;
+                    padding: 4rem 0 2rem;
                     background: radial-gradient(circle at center, rgba(255, 133, 10, 0.1) 0%, transparent 70%);
                 }
                 .logo {
@@ -128,13 +129,15 @@ app.get('/', (req, res) => {
                     margin-bottom: 1rem;
                     color: var(--primary);
                 }
-                h1 { font-size: 1.5rem; color: var(--text-dim); font-weight: 400; }
+                h1 { font-size: 1.5rem; color: var(--text-dim); font-weight: 400; margin-bottom: 1rem; }
+                .summary { max-width: 700px; margin: 0 auto; color: var(--text-dim); text-align: center; font-size: 1.1rem; }
                 
+                h2 { font-size: 1.25rem; color: var(--primary); margin: 3rem 0 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+
                 .grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
                     gap: 1.5rem;
-                    margin-top: 3rem;
                 }
                 .card {
                     background: var(--card);
@@ -160,11 +163,30 @@ app.get('/', (req, res) => {
                 .tag-post { background: rgba(16, 185, 129, 0.1); color: #10b981; }
                 .tag-get { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
                 .tag-put { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-                .tag-delete { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
+                
                 .path { font-family: monospace; color: var(--primary); font-weight: 600; margin-bottom: 0.5rem; display: block; }
                 .desc { color: var(--text-dim); font-size: 0.9rem; }
                 
+                .model-card {
+                    background: var(--card);
+                    border: 1px solid var(--border);
+                    border-radius: 1.25rem;
+                    padding: 1.5rem;
+                }
+                .model-title { color: var(--text); font-weight: 600; margin-bottom: 1rem; }
+                pre {
+                    background: var(--code-bg);
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                    overflow-x: auto;
+                    font-family: 'Consolas', 'Monaco', monospace;
+                    font-size: 0.85rem;
+                    color: #d4d4d4;
+                }
+                .key { color: #9cdcfe; }
+                .string { color: #ce9178; }
+                .number { color: #b5cea8; }
+
                 footer {
                     text-align: center;
                     padding: 3rem;
@@ -182,14 +204,19 @@ app.get('/', (req, res) => {
                     border-radius: 2rem;
                     margin-top: 1rem;
                 }
-                .dot { width: 8px; hieght: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981; }
+                .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981; }
             </style>
         </head>
         <body>
             <header>
                 <div class="container">
-                    <div class="logo">RightTutor Backend v1.0.0</div>
-                    <h1>Centralized Educational Management Ecosystem API</h1>
+                    <div class="logo">RightTutor API v1.0</div>
+                    <h1>Centralized Educational Management Ecosystem</h1>
+                    <p class="summary">
+                        This API serves as the backend backbone for the RightTutor platform, orchestrating real-time student enrollments, 
+                        tutor matching, and intelligent dashboard analytics. It leverages Firestore for persistence and 
+                        Google's Gemini AI for deep data insights.
+                    </p>
                     <div class="status">
                         <span class="dot"></span> System Operational
                     </div>
@@ -197,42 +224,61 @@ app.get('/', (req, res) => {
             </header>
 
             <div class="container">
+                <h2>Explore Endpoints</h2>
                 <div class="grid">
                     <div class="card">
                         <span class="tag tag-post">Post</span>
                         <span class="path">/api/v1/consultation</span>
-                        <p class="desc">Engine for scheduling professional consultations and tutor match requests.</p>
+                        <p class="desc">Schedules professional consultations and creates initial contact records.</p>
                     </div>
                     <div class="card">
                         <span class="tag tag-get">Get</span>
                         <span class="path">/api/v1/dashboard/stats</span>
-                        <p class="desc">Aggegrated real-time analytics for enrollment, inquiries, and throughput.</p>
+                        <p class="desc">Returns cached (5min) analytics for enrollment counts and resolution rates.</p>
                     </div>
                     <div class="card">
                         <span class="tag tag-post">Post</span>
                         <span class="path">/api/v1/dashboard/chat</span>
-                        <p class="desc">AI-Powered insights using Gemini 1.5 Flash for child progress analysis.</p>
+                        <p class="desc">AI Chat interface with full access to Contact, Booking, and Match databases.</p>
                     </div>
                     <div class="card">
                         <span class="tag tag-get">Get</span>
                         <span class="path">/api/v1/repository</span>
-                        <p class="desc">Bi-directional Google Sheets synchronization and data persistence layer.</p>
+                        <p class="desc">Triggers sync operations between Firestore and Google Sheets.</p>
                     </div>
-                    <div class="card">
-                        <span class="tag tag-post">Post</span>
-                        <span class="path">/api/v1/auth/login</span>
-                        <p class="desc">Secure JWT-based authentication for Administrative access.</p>
+                </div>
+
+                <h2>Key Data Models</h2>
+                <div class="grid">
+                    <div class="model-card">
+                        <div class="model-title">Contact / Inquiry Object</div>
+                        <pre>
+{
+  <span class="key">"name"</span>: <span class="string">"Jane Doe"</span>,
+  <span class="key">"email"</span>: <span class="string">"jane@example.com"</span>,
+  <span class="key">"subject"</span>: <span class="string">"Mathematics"</span>,
+  <span class="key">"message"</span>: <span class="string">"Looking for grade 10 tutor..."</span>,
+  <span class="key">"status"</span>: <span class="string">"Resolved"</span>,
+  <span class="key">"createdAt"</span>: <span class="string">"2024-03-15T10:00:00Z"</span>
+}</pre>
                     </div>
-                    <div class="card">
-                        <span class="tag tag-put">Put</span>
-                        <span class="path">/api/v1/manual-match</span>
-                        <p class="desc">Advanced tutor-to-student relationship management and tracking.</p>
+                    
+                    <div class="model-card">
+                        <div class="model-title">Booking Object</div>
+                        <pre>
+{
+  <span class="key">"studentName"</span>: <span class="string">"Alex Smith"</span>,
+  <span class="key">"tutorName"</span>: <span class="string">"Dr. Sarah Brown"</span>,
+  <span class="key">"subject"</span>: <span class="string">"Physics"</span>,
+  <span class="key">"classTime"</span>: <span class="string">"2024-03-20T14:30:00Z"</span>,
+  <span class="key">"status"</span>: <span class="string">"Scheduled"</span>
+}</pre>
                     </div>
                 </div>
 
                 <footer>
                     <p class="desc">© 2026 RightTutor Ecosystem. All rights reserved.</p>
-                    <p class="desc" style="margin-top: 0.5rem; font-size: 0.75rem;">Proprietary & Confidential • Developed for Advanced Agentic Coding</p>
+                    <p class="desc" style="margin-top: 0.5rem; font-size: 0.75rem;">Proprietary & Confidential</p>
                 </footer>
             </div>
         </body>
