@@ -1,5 +1,5 @@
 import { db } from "../Config/firebase.js";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ApiError } from "../Utils/ApiError.js";
 import { asyncHandler } from "../Utils/asyncHandler.js";
 import logger from "../Utils/logger.js";
@@ -38,22 +38,36 @@ export const analyzeInquiry = asyncHandler(async (req, res) => {
     }
 
     if (!process.env.GEMINI_API_KEY) {
+        logger.error("GEMINI_API_KEY is missing in backend environment!");
         throw new ApiError(500, "Gemini API key is not configured");
     }
 
-    const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const prompt = `Analyze this parent inquiry and provide a 2-sentence summary and a professional suggested reply: "${message}". You are a helpful school administrative assistant. Keep your analysis concise and your suggested replies warm and professional.`;
+        const prompt = `Analyze this parent inquiry and provide a 2-sentence summary and a professional suggested reply: "${message}". You are a helpful school administrative assistant. Keep your analysis concise and your suggested replies warm and professional.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+        // Add timeout wrapper
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("AI request timeout")), 30000)
+        );
 
-    res.status(200).json({
-        success: true,
-        data: text || "Unable to generate analysis."
-    });
+        const resultPromise = model.generateContent(prompt);
+        const result = await Promise.race([resultPromise, timeoutPromise]);
+        const response = await result.response;
+        const text = response.text();
+
+        logger.info("AI analysis completed successfully");
+
+        res.status(200).json({
+            success: true,
+            data: text || "Unable to generate analysis."
+        });
+    } catch (error) {
+        logger.error("AI Analysis Error:", error);
+        throw new ApiError(500, `AI analysis failed: ${error.message}`);
+    }
 });
 
 export const getAIChat = asyncHandler(async (req, res) => {
@@ -69,30 +83,42 @@ export const getAIChat = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Gemini API key is not configured on server");
     }
 
-    const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-    // Use the official model name
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const systemInstruction = `
+        const systemInstruction = `
         You are a professional administrative assistant for RightTutor.
         Context: ${context || 'General admin dashboard interaction.'}
         Tone: Helpful, direct, and concise.
         Goal: Answer administrative questions, summarize data, or help with scheduling.
     `;
 
-    const chat = model.startChat({
-        history: [],
-        generationConfig: {
-            maxOutputTokens: 500,
-        },
-    });
+        const chat = model.startChat({
+            history: [],
+            generationConfig: {
+                maxOutputTokens: 500,
+            },
+        });
 
-    const result = await chat.sendMessage(`${systemInstruction}\n\nUser Question: ${prompt}`);
-    const response = await result.response;
-    const text = response.text();
+        // Add timeout wrapper
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("AI request timeout")), 30000)
+        );
 
-    res.status(200).json({
-        success: true,
-        data: text || "I apologize, but I could not process that request."
-    });
+        const resultPromise = chat.sendMessage(`${systemInstruction}\n\nUser Question: ${prompt}`);
+        const result = await Promise.race([resultPromise, timeoutPromise]);
+        const response = await result.response;
+        const text = response.text();
+
+        logger.info("AI chat completed successfully");
+
+        res.status(200).json({
+            success: true,
+            data: text || "I apologize, but I could not process that request."
+        });
+    } catch (error) {
+        logger.error("AI Chat Error:", error);
+        throw new ApiError(500, `AI chat failed: ${error.message}`);
+    }
 });
