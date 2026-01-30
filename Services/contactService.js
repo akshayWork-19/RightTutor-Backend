@@ -36,6 +36,7 @@ class ContactServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("recent_activity_context");
 
             return result;
         } catch (error) {
@@ -84,6 +85,7 @@ class ContactServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("recent_activity_context");
 
             return result;
         } catch (error) {
@@ -111,6 +113,7 @@ class ContactServices {
 
             // Invalidate dashboard stats cache
             cache.delete("dashboard_stats");
+            cache.delete("recent_activity_context");
 
             return { id };
         } catch (error) {

@@ -5,22 +5,14 @@ import { asyncHandler } from "../Utils/asyncHandler.js";
 import logger from "../Utils/logger.js";
 import { cache } from "../Utils/cache.js";
 
-export const getDashboardStats = asyncHandler(async (req, res) => {
+// Helper to get stats with caching
+const getStatsInternal = async () => {
     const CACHE_KEY = "dashboard_stats";
     const CACHE_TTL = 300; // 5 minutes
 
-    // Check cache first
     const cachedStats = cache.get(CACHE_KEY);
-    if (cachedStats) {
-        logger.info("Dashboard stats served from cache");
-        return res.status(200).json({
-            success: true,
-            message: "Stats fetched successfully (cached)",
-            data: cachedStats
-        });
-    }
+    if (cachedStats) return cachedStats;
 
-    // If not in cache, fetch from database
     const inquiriesSnapshot = await db.collection("contacts").get();
     const bookingsSnapshot = await db.collection("bookings").get();
     const matchesSnapshot = await db.collection("manualMatches").get();
@@ -41,10 +33,37 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         resolutionRate
     };
 
-    // Store in cache
     cache.set(CACHE_KEY, stats, CACHE_TTL);
-    logger.info("Dashboard stats fetched from database and cached");
+    return stats;
+};
 
+// Helper to get recent activity with caching
+const getRecentActivityInternal = async () => {
+    const CACHE_KEY = "recent_activity_context";
+    const CACHE_TTL = 300; // 5 minutes
+
+    const cachedActivity = cache.get(CACHE_KEY);
+    if (cachedActivity) return cachedActivity;
+
+    // Fetch last 5 contacts for context
+    const recentContactsSnapshot = await db.collection("contacts")
+        .orderBy('createdAt', 'desc')
+        .limit(5)
+        .get();
+
+    const recentInquiries = recentContactsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return `- ${data.name} (${data.subject || 'No Subject'}): ${data.message?.substring(0, 50)}...`;
+    }).join('\n');
+
+    const activityContext = recentInquiries || "No recent inquiries found.";
+
+    cache.set(CACHE_KEY, activityContext, CACHE_TTL);
+    return activityContext;
+};
+
+export const getDashboardStats = asyncHandler(async (req, res) => {
+    const stats = await getStatsInternal();
     res.status(200).json({
         success: true,
         message: "Stats fetched successfully",
@@ -94,33 +113,48 @@ export const analyzeInquiry = asyncHandler(async (req, res) => {
 
 export const getAIChat = asyncHandler(async (req, res) => {
     const { prompt, context } = req.body;
-    logger.info(`AI Chat Request received. Prompt length: ${prompt?.length}`);
+    logger.info(`AI Chat Request received. Prompt: ${prompt?.substring(0, 50)}...`);
 
     if (!prompt) {
         throw new ApiError(400, "Prompt is required");
     }
 
     if (!process.env.GEMINI_API_KEY) {
-        logger.error("GEMINI_API_KEY is missing in backend environment!");
-        throw new ApiError(500, "Gemini API key is not configured on server");
+        throw new ApiError(500, "Gemini API key is not configured");
     }
 
     try {
+        // Fetch real-time data for context
+        const stats = await getStatsInternal();
+        const recentActivity = await getRecentActivityInternal();
+
+        const dbContext = `
+        CURRENT DASHBOARD DATA:
+        - Total Inquiries: ${stats.totalInquiries}
+        - Active Appointments: ${stats.activeAppointments}
+        - Teacher Requests: ${stats.teacherRequests}
+        - Resolution Rate: ${stats.resolutionRate}
+
+        RECENT INQUIRIES (Last 5):
+        ${recentActivity}
+        `;
+
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const systemInstruction = `
-        You are a professional administrative assistant for RightTutor.
-        Context: ${context || 'General admin dashboard interaction.'}
-        Tone: Helpful, direct, and concise.
-        Goal: Answer administrative questions, summarize data, or help with scheduling.
-    `;
+        You are a smart and helpful administrative assistant for RightTutor.
+        
+        ${dbContext}
+        
+        Additional Context: ${context || 'General interaction'}
+        
+        Goal: Answer questions based on the REAL data provided above. If asked about "how many inquiries" or "recent activity", use the data provided.
+        Tone: Professional, concise, and friendly.
+        `;
 
         const chat = model.startChat({
             history: [],
-            generationConfig: {
-                maxOutputTokens: 500,
-            },
         });
 
         // Add timeout wrapper
@@ -133,11 +167,9 @@ export const getAIChat = asyncHandler(async (req, res) => {
         const response = await result.response;
         const text = response.text();
 
-        logger.info("AI chat completed successfully");
-
         res.status(200).json({
             success: true,
-            data: text || "I apologize, but I could not process that request."
+            data: text
         });
     } catch (error) {
         logger.error("AI Chat Error:", error);
